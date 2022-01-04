@@ -90,7 +90,7 @@ mod reversi {
         }
 
         //隣接する座標を返す
-        fn get_neiborhoods(&self, x:i8,y:i8) -> Vec<(u8,u8)>{
+        fn get_neighborhoods(&self, x:i8,y:i8) -> Vec<(u8,u8)>{
             let candidates:Vec<(i8,i8)> = vec![
                 (x-1,y-1),(x-1,  y),(x-1,y+1),
                 (x  ,y-1),          (x  ,y+1),
@@ -101,8 +101,8 @@ mod reversi {
 
             candidates.into_iter().filter(|p| self.is_valid_point(p.0 as i8,p.1 as i8)).map(|p| (p.0 as u8,p.1 as u8) ).collect::<Vec<(u8,u8)>>()
         }
-        fn is_neiborhood(&self,center:(u8,u8),target:(u8,u8)) -> bool {
-            let ns = self.get_neiborhoods(center.0 as i8, center.1 as i8);
+        fn is_neighborhood(&self,center:(u8,u8),target:(u8,u8)) -> bool {
+            let ns = self.get_neighborhoods(center.0 as i8, center.1 as i8);
             for (nx,ny) in ns {
                 if nx == target.0 && ny == target.1{
                     return true;
@@ -110,14 +110,14 @@ mod reversi {
             }
             false
         }
-        fn get_empty_neiborhoods(&self,x:u8,y:u8) -> Vec<(u8,u8)>{
-            self.get_neiborhoods(x as i8,y as i8).into_iter()
+        fn get_empty_neighborhoods(&self,x:u8,y:u8) -> Vec<(u8,u8)>{
+            self.get_neighborhoods(x as i8,y as i8).into_iter()
                 .filter(|p| if let None = self.get_color(p.0, p.1) { true } else { false } )
                 .collect()
         }
-        fn get_neiborhood_enemies(&self,x:u8,y:u8, color:&Color) -> Vec<&Point>{
+        fn get_neighborhood_enemies(&self,x:u8,y:u8, color:&Color) -> Vec<&Point>{
             self.board.iter()
-            .filter(|p| self.is_neiborhood((x,y),(p.x,p.y)) )
+            .filter(|p| self.is_neighborhood((x,y),(p.x,p.y)) )
             .filter(|p| match p.color {
                 // 敵の色か
                 Color::Black => { if let Color::Black = color { false } else { true }},
@@ -127,7 +127,7 @@ mod reversi {
         //プレイヤーがおける座標の配列
         pub fn puttable_points(&self, player:&Color) -> Vec<(u8,u8)>{
             // 現在置かれているすべてのPointに隣接するまだ置かれていない座標たち
-            let candidates = self.board.iter().flat_map(|point| self.get_empty_neiborhoods(point.x, point.y));
+            let candidates = self.board.iter().flat_map(|point| self.get_empty_neighborhoods(point.x, point.y));
             // それぞれの座標に置けるか検証
             candidates.filter(|c| self.can_put(c.0, c.1, player)).collect()
         }
@@ -160,22 +160,22 @@ mod reversi {
         }
         // 盤面の状態的における位置か
         fn can_put_by_color(&self, x:u8,y:u8,color:&Color) -> bool {
-            let neiborhood_enemies:Vec<&Point> = self.get_neiborhood_enemies(x,y,color);
-            // println!("[DEBUG] ne:{:?}",neiborhood_enemies);
-            for neibor_enem in neiborhood_enemies {
+            let neighborhood_enemies:Vec<&Point> = self.get_neighborhood_enemies(x,y,color);
+            // println!("[DEBUG] ne:{:?}",neighborhood_enemies);
+            for neighbor_enem in neighborhood_enemies {
                 // 方向を算出する
                 // 以下を限界まで行う
                 // match その方向の次のpoint {
                 // 敵 => さらに次を調べる
                 // 自分 => trueを返す
                 // }
-                let direction = self.get_direction((x,y),(neibor_enem.x,neibor_enem.y));
+                let direction = self.get_direction((x,y),(neighbor_enem.x,neighbor_enem.y));
                 if direction.0 == 0 && direction.1 == 0 {
-                    panic!("[ERROR] invalid direction: {:?}, from:{:?}, to:{:?}",direction,(x,y),(neibor_enem.x,neibor_enem.y));
+                    panic!("[ERROR] invalid direction: {:?}, from:{:?}, to:{:?}",direction,(x,y),(neighbor_enem.x,neighbor_enem.y));
                 }
-                // println!("[DEBUG] dir:{:?}, ne:{:?}, p:{:?}",direction, neibor_enem, (x,y));
+                // println!("[DEBUG] dir:{:?}, ne:{:?}, p:{:?}",direction, neighbor_enem, (x,y));
 
-                let mut next_point = ((neibor_enem.x)as i8 + direction.0,(neibor_enem.y)as i8 + direction.1);
+                let mut next_point = ((neighbor_enem.x)as i8 + direction.0,(neighbor_enem.y)as i8 + direction.1);
                 let mut result = false;
                 while self.is_valid_point(next_point.0, next_point.1){
                     match self.get_color(next_point.0 as u8,next_point.1 as u8) {
@@ -274,14 +274,14 @@ mod reversi {
             // 相手 -> 次のコマを算出して繰り返す
             // 空   -> 終了
             let mut reversable_points:Vec<(u8,u8)> = Vec::new();
-            let neibor_enemies = self.get_neiborhood_enemies(x, y, &color);
-            for neibor_enem in neibor_enemies {
-                let dir = self.get_direction((x,y), (neibor_enem.x,neibor_enem.y));
+            let neighbor_enemies = self.get_neighborhood_enemies(x, y, &color);
+            for neighbor_enem in neighbor_enemies {
+                let dir = self.get_direction((x,y), (neighbor_enem.x,neighbor_enem.y));
                 if dir.0 == 0 && dir.1 == 0 {
-                    panic!("[ERROR] invalid direction: {:?}, from:{:?}, to:{:?}",dir,(x,y),(neibor_enem.x,neibor_enem.y));
+                    panic!("[ERROR] invalid direction: {:?}, from:{:?}, to:{:?}",dir,(x,y),(neighbor_enem.x,neighbor_enem.y));
                 }
-                let mut tmp_reversable = vec![(neibor_enem.x,neibor_enem.y)];
-                let mut next_point = ((neibor_enem.x)as i8 + dir.0,(neibor_enem.y)as i8 + dir.1);
+                let mut tmp_reversable = vec![(neighbor_enem.x,neighbor_enem.y)];
+                let mut next_point = ((neighbor_enem.x)as i8 + dir.0,(neighbor_enem.y)as i8 + dir.1);
 
                 // println!("====================!![DEBUG]!!================");
                 loop {
