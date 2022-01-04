@@ -26,17 +26,16 @@ mod reversi {
         color:Color
     }
 
-    // #[derive(Debug)]
     pub struct Reversi {
         player:Color, //手番のプレイヤーの色
         board:Vec<Point>
         /*
-            x
-        0 1 2 3 4 5 6 7
+                 x
+          0 1 2 3 4 5 6 7
         0 * * * * * * * *
         1 * * * * * * * *
         2 * * * * * * * *
-    y 3 * * * B W * * *
+      y 3 * * * B W * * *
         4 * * * W B * * *
         5 * * * * * * * *
         6 * * * * * * * *
@@ -96,10 +95,7 @@ mod reversi {
                 (x  ,y-1),          (x  ,y+1),
                 (x+1,y-1),(x+1,  y),(x+1,y+1),
             ];
-            // let filtered:Vec<(i8,i8)> = candidates.into_iter().filter(|p| self.is_valid_point(p.0 as i8,p.1 as i8)).collect();
-            // filtered.collect::<Vec<(u8,u8)>>();
-
-            candidates.into_iter().filter(|p| self.is_valid_point(p.0 as i8,p.1 as i8)).map(|p| (p.0 as u8,p.1 as u8) ).collect::<Vec<(u8,u8)>>()
+            candidates.into_iter().filter(|p| self.is_valid_point(p.0 as i8,p.1 as i8)).map(|p| (p.0 as u8,p.1 as u8) ).collect()
         }
         fn is_neighborhood(&self,center:(u8,u8),target:(u8,u8)) -> bool {
             let ns = self.get_neighborhoods(center.0 as i8, center.1 as i8);
@@ -140,7 +136,6 @@ mod reversi {
             let a = self.is_valid_point(x as i8, y as i8);
             let b = self.empty_point(x, y);
             let c = self.can_put_by_color(x,y,color);
-            // println!("[DEBUG] valid:{}, empty:{}, color:{}", a,b,c);
             a && b && c
         }
         // 盤面に収まるindex
@@ -161,23 +156,20 @@ mod reversi {
         // 盤面の状態的における位置か
         fn can_put_by_color(&self, x:u8,y:u8,color:&Color) -> bool {
             let neighborhood_enemies:Vec<&Point> = self.get_neighborhood_enemies(x,y,color);
-            // println!("[DEBUG] ne:{:?}",neighborhood_enemies);
             for neighbor_enem in neighborhood_enemies {
-                // 方向を算出する
-                // 以下を限界まで行う
-                // match その方向の次のpoint {
-                // 敵 => さらに次を調べる
-                // 自分 => trueを返す
-                // }
                 let direction = self.get_direction((x,y),(neighbor_enem.x,neighbor_enem.y));
                 if direction.0 == 0 && direction.1 == 0 {
                     panic!("[ERROR] invalid direction: {:?}, from:{:?}, to:{:?}",direction,(x,y),(neighbor_enem.x,neighbor_enem.y));
                 }
-                // println!("[DEBUG] dir:{:?}, ne:{:?}, p:{:?}",direction, neighbor_enem, (x,y));
 
                 let mut next_point = ((neighbor_enem.x)as i8 + direction.0,(neighbor_enem.y)as i8 + direction.1);
                 let mut result = false;
                 while self.is_valid_point(next_point.0, next_point.1){
+                    /* その方向の次のpointが
+                     * 敵 => さらに次を調べる
+                     * 自分 => trueを返す
+                     * 何もない => その方向はだめ
+                     * 以上を端に到達するまで行う */
                     match self.get_color(next_point.0 as u8,next_point.1 as u8) {
                         Some(Color::Black) => {
                             if let Color::Black = color {
@@ -268,11 +260,10 @@ mod reversi {
         }
         // 置いたことでひっくり返せるものをひっくり返す
         pub fn update_by_put(&mut self,x:u8,y:u8, color:Color){
-            // 隣接する敵を取得
-            // 方向を算出して、その方向の駒が
-            // 自分 -> それまでのコマを自分のコマに
-            // 相手 -> 次のコマを算出して繰り返す
-            // 空   -> 終了
+            /* 隣接する敵を取得し、その方向の駒が
+             * 自分 -> それまでのコマを自分のコマに
+             * 相手 -> 次のコマを算出して繰り返す
+             * 空   -> 終了 */
             let mut reversable_points:Vec<(u8,u8)> = Vec::new();
             let neighbor_enemies = self.get_neighborhood_enemies(x, y, &color);
             for neighbor_enem in neighbor_enemies {
@@ -283,50 +274,39 @@ mod reversi {
                 let mut tmp_reversable = vec![(neighbor_enem.x,neighbor_enem.y)];
                 let mut next_point = ((neighbor_enem.x)as i8 + dir.0,(neighbor_enem.y)as i8 + dir.1);
 
-                // println!("====================!![DEBUG]!!================");
                 loop {
                     if !self.is_valid_point(next_point.0, next_point.1) {
                         tmp_reversable.clear();
                             break;
                     }
-                    // println!("[DEBUG] next_point:{:?}",next_point);
                     match self.get_color(next_point.0 as u8,next_point.1 as u8) {
                         Some(Color::Black) => {
                             if let Color::Black = color {
-                                // println!("[DEBUG] same color");
                                 break;
                             } else {
-                                // println!("[DEBUG] enemy color");
                                 tmp_reversable.push((next_point.0 as u8,next_point.1 as u8));
                                 next_point = (next_point.0 + dir.0, next_point.1 + dir.1);
                             }
                         },
                         Some(Color::White) => {
                             if let Color::White = color {
-                                // println!("[DEBUG] same color");
                                 break;
                             } else {
-                                // println!("[DEBUG] enemy color");
                                 tmp_reversable.push((next_point.0 as u8, next_point.1 as u8));
                                 next_point = (next_point.0 + dir.0, next_point.1 + dir.1);
                             }
                         }
                         None => {
-                            // println!("[DEBUG] NONE!!");
                             tmp_reversable.clear();
                             break;
                         }
                     };
                 }
-                // println!("====================!![DEBUG]!!================");
                 reversable_points.extend(tmp_reversable);
-                // println!("[DEBUG] reversable: {:?}",reversable_points);
             }
             for reversable_point in reversable_points {
-                // self.board.push(Point{x:reversable_point.0,y:reversable_point.1,color});
                 self.change_color(reversable_point.0, reversable_point.1, color);
             }
-            // println!("[DEBUG] board:{:?}",self.board);
         }
     }
 }
